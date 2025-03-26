@@ -9,11 +9,6 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS} from "lib/account-abstraction/contracts/core/Helpers.sol";
 import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-/**
- * @title MinimalAccount
- * @notice A minimal account contract that allows users to send transactions to the EntryPoint.
- * @dev Inherits from IAccount and Ownable to manage user operations securely.
- */
 contract MinimalAccount is IAccount, Ownable {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -60,7 +55,6 @@ contract MinimalAccount is IAccount, Ownable {
      * @notice Executes a function call on the account.
      * @param dest The address to call.
      * @param value The value to send with the call.
-     * @param functionData The data to send with the call.
      */
     function execute(
         address dest,
@@ -80,7 +74,6 @@ contract MinimalAccount is IAccount, Ownable {
      * @param userOp The packed user operation to validate.
      * @param userOpHash The hash of the user operation.
      * @param missingAccountFunds The amount of funds missing for the operation.
-     * @return validationData The validation result.
      */
     function validateUserOp(
         PackedUserOperation calldata userOp,
@@ -99,7 +92,6 @@ contract MinimalAccount is IAccount, Ownable {
      * @notice Validates the signature of a user operation.
      * @param userOp The packed user operation containing the signature.
      * @param userOpHash The hash of the user operation.
-     * @return validationData The validation result.
      */
     function _validateSignature(
         PackedUserOperation calldata userOp,
@@ -117,7 +109,6 @@ contract MinimalAccount is IAccount, Ownable {
 
     /**
      * @notice Pays the prefund amount if missingAccountFunds is greater than zero.
-     * @param missingAccountFunds The amount of funds to pay.
      */
     function _payPrefund(uint256 missingAccountFunds) internal {
         if (missingAccountFunds > 0) {

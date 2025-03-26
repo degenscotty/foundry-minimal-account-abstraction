@@ -3,6 +3,13 @@ pragma solidity ^0.8.24;
 
 import {Script} from "forge-std/Script.sol";
 
+/**
+ * @title HelperConfig
+ * @notice A helper contract for configuration of network settings.
+ * @dev This contract provides a way to configure network-specific settings
+ *      for different chains. It allows for the configuration of entry points
+ *      and accounts for various networks.
+ */
 contract HelperConfig is Script {
     error HelperConfig__InvalidChainId();
 

@@ -5,17 +5,12 @@ import {Script} from "forge-std/Script.sol";
 import {MinimalAccount} from "src/ethereum/MinimalAccount.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 
-contract DeployMinimalAccount is Script {
+contract DeployMinimal is Script {
     function run() public {
         deployMinimalAccount();
     }
 
-    /**
-     * @notice Deploys a MinimalAccount contract.
-     * @return helperConfig The HelperConfig instance used for deployment.
-     * @return minimalAccount The deployed MinimalAccount instance.
-     * @dev This function creates a new MinimalAccount and transfers ownership.
-     */
+    // @notice Deploys a MinimalAccount contract.
     function deployMinimalAccount()
         public
         returns (HelperConfig, MinimalAccount)
