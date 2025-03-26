@@ -28,10 +28,51 @@ contract MinimalAccount is IAccount, Ownable {
     IEntryPoint private immutable i_entryPoint;
 
     /*//////////////////////////////////////////////////////////////
+                               MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+    modifier requireFromEntryPoint() {
+        if (msg.sender != address(i_entryPoint)) {
+            revert MinimalAccount__NotFromEntryPoint();
+        }
+        _;
+    }
+
+    modifier requireFromEntryPointOrOwner() {
+        if (msg.sender != address(i_entryPoint) && msg.sender != owner()) {
+            revert MinimalAccount__NotFromEntryPointOrOwner();
+        }
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     constructor(address entryPoint) Ownable(msg.sender) {
         i_entryPoint = IEntryPoint(entryPoint);
+    }
+
+    receive() external payable {}
+
+    /*//////////////////////////////////////////////////////////////
+                           EXTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Executes a function call on the account.
+     * @param dest The address to call.
+     * @param value The value to send with the call.
+     * @param functionData The data to send with the call.
+     */
+    function execute(
+        address dest,
+        uint256 value,
+        bytes calldata functionData
+    ) external payable requireFromEntryPointOrOwner {
+        (bool success, bytes memory result) = dest.call{value: value}(
+            functionData
+        );
+        if (!success) {
+            revert MinimalAccount__CallFailed(result);
+        }
     }
 
     /**
@@ -45,12 +86,15 @@ contract MinimalAccount is IAccount, Ownable {
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
         uint256 missingAccountFunds
-    ) external returns (uint256 validationData) {
+    ) external requireFromEntryPoint returns (uint256 validationData) {
         validationData = _validateSignature(userOp, userOpHash);
         // _validateNonce()
         _payPrefund(missingAccountFunds);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                           INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
     /**
      * @notice Validates the signature of a user operation.
      * @param userOp The packed user operation containing the signature.
@@ -61,15 +105,10 @@ contract MinimalAccount is IAccount, Ownable {
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view returns (uint256 validationData) {
-        if (userOp.sender != address(this))
-            revert MinimalAccount__NotFromEntryPoint();
-        if (userOp.initCode.length > 0)
-            revert MinimalAccount__NotFromEntryPointOrOwner();
-
-        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(
+        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(
             userOpHash
         );
-        address signer = ECDSA.recover(messageHash, userOp.signature);
+        address signer = ECDSA.recover(ethSignedMessageHash, userOp.signature);
         if (signer != owner()) {
             return SIG_VALIDATION_FAILED;
         }
@@ -88,5 +127,12 @@ contract MinimalAccount is IAccount, Ownable {
             }("");
             (success);
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                GETTERS
+    //////////////////////////////////////////////////////////////*/
+    function getEntryPoint() external view returns (address) {
+        return address(i_entryPoint);
     }
 }
