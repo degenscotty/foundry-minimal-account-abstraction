@@ -2,15 +2,14 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
+import {console2} from "forge-std/console2.sol";
 import {MinimalAccount} from "src/ethereum/MinimalAccount.sol";
 import {DeployMinimal} from "script/DeployMinimal.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {SendPackedUserOp, PackedUserOperation} from "script/SendPackedUserOp.s.sol";
-import {IEntryPoint} from "lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {SendPackedUserOp, PackedUserOperation, IEntryPoint} from "script/SendPackedUserOp.s.sol";
 
 contract MinimalAccountTest is Test {
     using MessageHashUtils for bytes32;
@@ -100,7 +99,8 @@ contract MinimalAccountTest is Test {
         PackedUserOperation memory packedUserOp = sendPackedUserOp
             .generateSignedUserOperation(
                 executeCallData,
-                helperConfig.getConfig()
+                helperConfig.getConfig(),
+                address(minimalAccount)
             );
 
         bytes32 userOperationHash = IEntryPoint(
@@ -117,5 +117,87 @@ contract MinimalAccountTest is Test {
         assertEq(actualSigner, address(minimalAccount.owner()));
     }
 
-    function testSendPackedUserOp() public {}
+    function testValidationUserOps() public {
+        // Arrange
+        assertEq(usdc.balanceOf(address(minimalAccount)), 0);
+        address dest = address(usdc);
+        uint256 value = 0;
+        bytes memory functionData = abi.encodeWithSelector(
+            ERC20Mock.mint.selector,
+            address(minimalAccount),
+            AMOUNT
+        );
+
+        bytes memory executeCallData = abi.encodeWithSelector(
+            MinimalAccount.execute.selector,
+            dest,
+            value,
+            functionData
+        );
+
+        PackedUserOperation memory packedUserOp = sendPackedUserOp
+            .generateSignedUserOperation(
+                executeCallData,
+                helperConfig.getConfig(),
+                address(minimalAccount)
+            );
+
+        bytes32 userOperationHash = IEntryPoint(
+            helperConfig.getConfig().entryPoint
+        ).getUserOpHash(packedUserOp);
+
+        uint256 missingAccountFunds = 1 ether;
+
+        // Act
+        vm.prank(helperConfig.getConfig().entryPoint);
+        uint256 validationData = minimalAccount.validateUserOp(
+            packedUserOp,
+            userOperationHash,
+            missingAccountFunds
+        );
+
+        // Assert
+        assertEq(validationData, 0);
+    }
+
+    function testEntryPointCanExecuteCommands() public {
+        // Arrange
+        assertEq(usdc.balanceOf(address(minimalAccount)), 0);
+        address dest = address(usdc);
+        uint256 value = 0;
+        bytes memory functionData = abi.encodeWithSelector(
+            ERC20Mock.mint.selector,
+            address(minimalAccount),
+            AMOUNT
+        );
+
+        bytes memory executeCallData = abi.encodeWithSelector(
+            MinimalAccount.execute.selector,
+            dest,
+            value,
+            functionData
+        );
+
+        PackedUserOperation memory packedUserOp = sendPackedUserOp
+            .generateSignedUserOperation(
+                executeCallData,
+                helperConfig.getConfig(),
+                address(minimalAccount)
+            );
+
+        vm.deal(address(minimalAccount), 100 ether);
+
+        PackedUserOperation[] memory ops = new PackedUserOperation[](1);
+        ops[0] = packedUserOp;
+
+        // Act
+        vm.prank(randomuser);
+        IEntryPoint(helperConfig.getConfig().entryPoint).handleOps(
+            ops,
+            payable(randomuser)
+        );
+
+        // Assert
+        assertEq(usdc.balanceOf(address(minimalAccount)), AMOUNT);
+    }
 }
