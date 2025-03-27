@@ -185,7 +185,7 @@ contract MinimalAccountTest is Test {
                 address(minimalAccount)
             );
 
-        vm.deal(address(minimalAccount), 100 ether);
+        vm.deal(address(minimalAccount), 1 ether);
 
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = packedUserOp;
