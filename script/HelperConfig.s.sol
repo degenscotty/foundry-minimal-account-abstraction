@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Script} from "forge-std/Script.sol";
+import {Script, console2} from "forge-std/Script.sol";
+import {EntryPoint} from "lib/account-abstraction/contracts/core/EntryPoint.sol";
 
 /**
  * @title HelperConfig
@@ -21,6 +22,8 @@ contract HelperConfig is Script {
     uint256 constant ETH_SEPOLIA_CHAIN_ID = 11155111;
     uint256 constant LOCAL_CHAIN_ID = 31337;
     address constant BURNER_WALLET = 0xBDEB869a058A729bD91E0c82257d61F81294aEa2;
+    address constant FOUNDRY_DEFAULT_WALLET =
+        0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
 
     NetworkConfig public localNetworkConfig;
     mapping(uint256 chainid => NetworkConfig) public networkConfigs;
@@ -58,6 +61,16 @@ contract HelperConfig is Script {
             return localNetworkConfig;
         }
 
-        // deploy Mock entry point contract etc..
+        // deploy mocks
+        console2.log("Deploying mocks...");
+        vm.startBroadcast(FOUNDRY_DEFAULT_WALLET);
+        EntryPoint entryPoint = new EntryPoint();
+        vm.stopBroadcast();
+
+        return
+            NetworkConfig({
+                entryPoint: address(entryPoint),
+                account: FOUNDRY_DEFAULT_WALLET
+            });
     }
 }
